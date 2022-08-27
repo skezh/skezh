@@ -1,0 +1,270 @@
+<html>
+
+<!-- 2. CSS - "looks" - Style sheet of the blocks and elements. -->
+<style>
+body {
+    background-blend-mode: multiply;
+    background:url("https://r.aww.xyz/assets/bg_space.jpg") top repeat fixed rgba(0,0,0,.5);
+    background-size: cover;
+    background-position: 100%;
+    font-size: 30px;
+    overflow: hidden;
+}
+
+#whale {
+  position: absolute;
+  background: darkblue;
+  border-radius: 40px;
+}
+
+#tail {
+  position: absolute;
+  height: 30px;
+  width: 70px;
+  left: -30px;
+  background: darkblue;
+  border-bottom-left-radius: 40px;
+}
+
+#mouth {
+  position: absolute;
+  height: 5px;
+  width: 20px;
+  left: 80px;
+  top: 25px;
+  background: white;
+  border-bottom-left-radius: 40px;
+}
+
+#eye {
+  position: absolute;
+  height: 5px;
+  width: 5px;
+  left: 80px;
+  top: 10px;
+  background: white;
+  border-radius: 10px;
+}
+
+.fish{
+  position: absolute;
+  height: 20px;
+  width: 30px; 
+  background: yellow;
+  border-radius: 40px;
+}
+
+.fish_eye {
+  position: absolute;
+  height: 3px;
+  width: 3px;
+  top: 6px;
+  background: darkblue;
+  border-radius: 40px;
+}
+
+</style>
+<div id="whale" style="left: 100px; top: 100px; height: 40px; width: 100px;">
+	<div id="tail"></div>
+	<div id="mouth"></div>
+	<div id="eye"></div>
+</div>
+
+</div>
+
+<!-- 3. Javascript - "brains" of your program -->
+<script>
+let pressedKeys = {};
+let pressedMouse = false;
+let mouseCoords = {};
+let mass = 1;
+let fishPallete = ['#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900'];
+let fishes = [];
+let whaleAngle = 0;
+
+// Save state of keys pressed or released in the pressedKeys object
+window.onkeydown = (e) => { pressedKeys[e.code] = true;}
+window.onkeyup = (e) => { pressedKeys[e.code] = false;}
+window.onmousedown = (e) => { pressedMouse = true;}
+window.onmouseup = (e) => { pressedMouse = false };
+window.onmousemove = (e) => { mouseCoords = { x : e.pageX, y: e.pageY};}
+window.ontouchmove  = (e) => { mouseCoords = { x : e.touches[0].clientX, y: e.touches[0].clientX}; } 
+window.ontouchend = (e) => { pressedMouse = false };
+window.ontouchstart = (e) => { pressedMouse = true };
+
+generateFish(50);
+
+let whale = document.getElementById("whale");
+
+// Repeat the function every 20 miliseconds
+setInterval( function() {	  
+  whaleControl()
+
+  fishes.forEach( (fish, i) => {
+	if (checkHit(whale, fish.element)) {
+		eatFish(fish);
+		return;
+	}
+	
+	fishMove(fish);
+  });
+  
+} ,20 );
+
+
+function whaleControl() {
+
+	// Keyboard control
+  let whaleTopNumber = parseInt(whale.style.top);
+  let whaleLeftNumber = parseInt(whale.style.left);
+  let whaleWidth = parseInt(whale.style.width) * mass;
+  let whaleHeight = parseInt(whale.style.height) * mass;
+  
+  if (pressedKeys.ArrowUp === true) {
+    whale.style.top = ( whaleTopNumber - 10 ) + "px";
+  }
+  if (pressedKeys.ArrowDown === true) {
+    whale.style.top = ( whaleTopNumber + 10 ) + "px";
+  }
+  if (pressedKeys.ArrowLeft === true) {
+    whale.style.left = ( whaleLeftNumber - 10 ) + "px";
+  }
+  if (pressedKeys.ArrowRight === true) {
+    whale.style.left = ( whaleLeftNumber + 10 ) + "px";
+  }
+  
+   // Mouse / touchpad control 
+   if (pressedMouse) {
+		
+		//	Rotate whale
+		let whaleNoseX = whaleLeftNumber + whaleWidth;
+		let whaleNoseY = whaleTopNumber + whaleHeight / 2;
+		let xDiff = mouseCoords.x - whaleNoseX;
+		let yDiff = mouseCoords.y - whaleNoseY;
+		let hypotenuse = Math.sqrt( Math.pow(xDiff, 2) + Math.pow(yDiff, 2) );
+		let whaleRadAngle = Math.asin(yDiff/hypotenuse);
+		
+		if (xDiff > 0) {
+			whaleAngle = whaleRadAngle * (180 / Math.PI);
+		}
+		else {
+			whaleAngle = 180 - whaleRadAngle * (180 / Math.PI);
+		}
+		
+		console.log(whaleRadAngle, whaleAngle);
+		whale.style.transform = "scale("+mass+")" + 'rotate(' +whaleAngle+ 'deg)';		
+		
+		// Move whale
+		whale.style.top = ( whaleTopNumber + Math.sin(whaleRadAngle) * 5 ) + 'px';
+		if (xDiff > 0) {
+			whale.style.left = ( whaleLeftNumber + Math.cos(whaleRadAngle) * 5 * mass ) + 'px';
+		}
+		else {
+			whale.style.left = ( whaleLeftNumber - Math.cos(whaleRadAngle) * 5 * mass ) + 'px';
+		}
+
+   }
+}
+
+function drawBox(x1, x2, y1, y2) {
+	let boxDiv = document.createElement('div');
+	boxDiv.style.border = '1px solid ' + fishPallete[Math.ceil(Math.random() * fishPallete.length)];
+	boxDiv.style.position = 'absolute';
+
+	boxDiv.style.left = (x1 > x2 ? x2 : x1) + 'px';
+	boxDiv.style.top = (y1 > y2 ? y2 : y1) + 'px';
+	boxDiv.style.width = Math.abs(x1 - x2) + 'px';
+	boxDiv.style.height = Math.abs(y1 - y2) + 'px';
+	
+	document.body.append(boxDiv);
+}
+  
+
+function eatFish(fish) {
+	mass += 0.1;
+	whale.style.transform = "scale("+mass+")" + 'rotate(' +whaleAngle+ 'deg)';
+	fish.element.remove();
+}
+
+function fishMove(fish) {
+	let fishLeft = fish.element.style.left; 
+	let fishOffset = parseInt(fishLeft); 
+  
+	if (fish.direction === 'left') {
+		fish.element.style.left = ( fishOffset - 5 ) + "px";
+	}
+	else {
+		fish.element.style.left = ( fishOffset + 5 ) + "px";
+	}
+	
+	if (fishOffset > 1800) {
+		fish.direction = 'left';
+		
+		if (fish.rotated) {
+			fish.element.style.transform = "none";
+		}
+		else {
+			fish.element.style.transform = "scaleX(-1)";
+		}
+		fish.rotated = !fish.rotated;
+	}
+	
+	if (fishOffset < 50) {
+		fish.direction = 'right';
+		
+		if (fish.rotated) {
+			fish.element.style.transform = "none";
+		}
+		else {
+			fish.element.style.transform = "scaleX(-1)";
+		}
+		fish.rotated = !fish.rotated;
+	}
+}
+
+function checkHit(elem1, elem2) {
+    let rect1 = elem1.getBoundingClientRect();
+    let rect2 = elem2.getBoundingClientRect();
+
+    if (rect1.right >= rect2.left && rect1.left <= rect2.right) {
+        if (rect1.bottom >= rect2.top && rect1.top <= rect2.bottom) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function generateFish(numOfFishes) {
+	for (let i = 0; i < numOfFishes; i++) {
+		let newFish = document.createElement('div');
+		newFish.classList.add('fish');
+		newFish.style.top = (Math.floor(Math.random() * 800) + 20) + 'px';
+		newFish.style.left = (Math.floor(Math.random() * 1000) + 700) + 'px';
+		newFish.style.background = fishPallete[Math.ceil(Math.random() * fishPallete.length)];
+		let direction = ['left', 'right'][Math.floor(Math.random() * 2)];
+		let fishEye = document.createElement('div');
+		fishEye.classList.add('fish_eye');
+		
+		if (direction === 'left') {
+			fishEye.style.left = '3px';
+		}
+		else {
+			fishEye.style.left = '24px';
+		}
+		newFish.appendChild(fishEye);
+		
+		
+		document.body.appendChild(newFish);
+		
+		fishes.push(
+			{
+				element: newFish, 
+				direction: direction,
+			}
+		)
+	}
+}
+
+
+</script>
+</html>
